@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Qwen3.6-27B MTP Summary</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2e3a;
+    --text: #e2e4e9;
+    --dim: #8b90a0;
+    --accent: #6c8eef;
+    --green: #4ade80;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; }
+.container { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+h1 { font-size: 28px; margin-bottom: 8px; }
+h2 { font-size: 20px; margin: 40px 0 16px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+h3 { font-size: 16px; margin: 24px 0 12px; color: var(--dim); }
+.subtitle { color: var(--dim); font-size: 14px; margin-bottom: 32px; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 16px 0; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.card-title { font-size: 14px; color: var(--dim); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+.chart-wrap { position: relative; height: 320px; }
+.chart-wrap.tall { height: 520px; }
+.full-width { grid-column: 1 / -1; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0; }
+th, td { padding: 8px 12px; text-align: right; border-bottom: 1px solid var(--border); }
+th { color: var(--dim); font-weight: 500; font-size: 12px; text-transform: uppercase; }
+td:first-child, th:first-child { text-align: left; }
+tr:hover td { background: rgba(108,142,239,0.05); }
+table.sortable th { cursor: pointer; user-select: none; position: relative; padding-right: 22px; }
+table.sortable th:hover { color: var(--accent); }
+table.sortable th::after { content: '⇅'; position: absolute; right: 8px; opacity: 0.35; font-size: 10px; }
+table.sortable th.sort-asc::after { content: '▲'; opacity: 1; color: var(--accent); }
+table.sortable th.sort-desc::after { content: '▼'; opacity: 1; color: var(--accent); }
+.findings { list-style: none; }
+.findings li { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.findings li:last-child { border-bottom: none; }
+.findings .num { display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; background: var(--accent); color: #fff; border-radius: 50%; font-size: 12px; font-weight: 700; margin-right: 10px; }
+.mtp-legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 16px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+.mtp-legend span { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--dim); line-height: 1.3; min-width: 0; }
+.mtp-legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+code { color: #c4b5fd; }
+@media (max-width: 700px) { .mtp-legend { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>Qwen3.6-27B Q4_K_M MTP Summary</h1>
+<p class="subtitle">llama.cpp draft-MTP / ngram-combo · ROCm · includes no-speculation baseline (S1)</p>
+
+<h2>MTP Speculative Decoding</h2>
+
+<div class="grid">
+<div class="card full-width">
+<div class="card-title">Decode Speed (t/s) — All MTP Sessions</div>
+<div class="chart-wrap tall"><canvas id="chartMTP"></canvas></div>
+<div class="mtp-legend">
+  <span><i style="background:#71717a;border-top:2px dashed #71717a;height:0;border-radius:0"></i>S1: baseline (no spec) — 33.87 t/s</span>
+  <span><i style="background:#14b8a6"></i>S2: n=6, q8/f16 — 77.2% acc</span>
+  <span><i style="background:#86efac"></i>S3: n=6, 5:5 — 74.2% acc</span>
+  <span><i style="background:#fbbf24"></i>S4: n=3, q8/f16 — 91.1% acc</span>
+  <span><i style="background:#f87171"></i>S5: n=2, 5:5 — 96.7% acc</span>
+  <span><i style="background:#6c8eef"></i>S6: n=4, q8/q8 — 88.3% acc</span>
+  <span><i style="background:#c084fc"></i>S7: n=2, q8/q8 — 93.7% acc</span>
+  <span><i style="background:#f472b6"></i>S8: n=5, q8/q8 — 83.1% acc</span>
+  <span><i style="background:#22d3ee"></i>S9: n=5, f16/f16 — 82.3% acc</span>
+  <span><i style="background:#60a5fa"></i>S10: n=6, f16/f16 — 76.6% acc</span>
+  <span><i style="background:#fb923c"></i>S11: n=6, b/ub 4086/1024 — 76.0% acc</span>
+  <span><i style="background:#4ade80"></i>S12: n=6, b/ub 1024/1024 — 83.0% acc</span>
+  <span><i style="background:#94a3b8"></i>S13: n=6, b/ub 1024/512 — 74.7% acc</span>
+  <span><i style="background:#d946ef"></i>S14: n=5, b/ub 1024/1024 — 79.7% acc</span>
+  <span><i style="background:#38bdf8"></i>S15: n=7, b/ub 1024/1024 — 71.1% acc</span>
+  <span><i style="background:#84cc16"></i>S16: n=4, b/ub 1024/1024 — 86.3% acc</span>
+  <span><i style="background:#a78bfa"></i>S17: n=6, b/ub 2048/2048, q8/q8 — 78.8% acc</span>
+  <span><i style="background:#f97316"></i>S18: n=6, k4v=48 — 62.8% acc</span>
+  <span><i style="background:#2dd4bf"></i>S19: n=6, k4v=96 — 64.7% acc</span>
+  <span><i style="background:#eab308"></i>S20: n=6, k4v=24 — 65.0% acc</span>
+  <span><i style="background:#10b981"></i>S21: n=3, k4v=64 — 72.8% acc</span>
+  <span><i style="background:#8b5cf6"></i>S22: n=2, k4v=64 — 67.9% acc</span>
+  <span><i style="background:#ef4444"></i>S23: n=4, k4v=64 — 76.1% acc (BEST)</span>
+  <span><i style="background:#f43f5e"></i>S24: n=4, k4v=64 rerun — 68.6% acc</span>
+  <span><i style="background:#64748b"></i>S25: n=3, k4v=96 — 39.9% acc</span>
+</div>
+</div>
+
+<div class="card full-width">
+<div class="card-title">Prefill Speed (t/s) — Prompt Eval Degradation with Context Growth</div>
+<div class="chart-wrap tall"><canvas id="chartMTPPrefill"></canvas></div>
+<div class="mtp-legend">
+  <span><i style="background:#14b8a6"></i>S2: n=6, q8/f16</span>
+  <span><i style="background:#86efac"></i>S3: n=6, 5:5</span>
+  <span><i style="background:#fbbf24"></i>S4: n=3, q8/f16</span>
+  <span><i style="background:#f87171"></i>S5: n=2, 5:5</span>
+  <span><i style="background:#6c8eef"></i>S6: n=4, q8/q8</span>
+  <span><i style="background:#c084fc"></i>S7: n=2, q8/q8</span>
+  <span><i style="background:#f472b6"></i>S8: n=5, q8/q8</span>
+  <span><i style="background:#22d3ee"></i>S9: n=5, f16/f16</span>
+  <span><i style="background:#60a5fa"></i>S10: n=6, f16/f16</span>
+  <span><i style="background:#fb923c"></i>S11: n=6, b/ub 4086/1024</span>
+  <span><i style="background:#4ade80"></i>S12: n=6, b/ub 1024/1024</span>
+  <span><i style="background:#94a3b8"></i>S13: n=6, b/ub 1024/512</span>
+  <span><i style="background:#d946ef"></i>S14: n=5, b/ub 1024/1024</span>
+  <span><i style="background:#38bdf8"></i>S15: n=7, b/ub 1024/1024</span>
+  <span><i style="background:#84cc16"></i>S16: n=4, b/ub 1024/1024</span>
+  <span><i style="background:#a78bfa"></i>S17: n=6, b/ub 2048/2048, q8/q8</span>
+</div>
+</div>
+</div>
+
+<div class="grid">
+<div class="card full-width">
+<div class="card-title">Decode Speed vs Baseline (S1: 33.87 t/s, no speculation)</div>
+<div class="chart-wrap tall"><canvas id="chartBar"></canvas></div>
+</div>
+</div>
+
+<div class="grid">
+<div class="card">
+<div class="chart-wrap"><canvas id="chartMTPScatter"></canvas></div>
+</div>
+<div class="card">
+<div class="card-title">Key Findings</div>
+<ul class="findings">
+<li><span class="num">1</span><strong>Best TG:</strong> S23, MTP + ngram <code>n=4 k4v=64</code>, 139.86 t/s.</li>
+<li><span class="num">2</span><strong>Repeat:</strong> S24 repeated <code>n=4 k4v=64</code> at 111.62 t/s with lower 68.6% acceptance.</li>
+<li><span class="num">3</span><strong>Pure MTP:</strong> S12 remains the best non-ngram baseline at 79.71 t/s.</li>
+<li><span class="num">4</span><strong>Best PP:</strong> S17, <code>n=6 -b 2048 -ub 2048</code>, q8/q8, 1065.6 t/s.</li>
+<li><span class="num">5</span><strong>Batch:</strong> <code>1024/1024</code> remains the practical TG setting.</li>
+<li><span class="num">6</span><strong>Avoid:</strong> S25 <code>n=3 k4v=96</code> fell to 61.73 t/s and 39.9% acceptance.</li>
+<li><span class="num">7</span><strong>Baseline:</strong> S1, no speculation, 33.87 t/s — all MTP configs deliver 1.9×–4.1× speedup.</li>
+</ul>
+</div>
+</div>
+
+<h3>Session Comparison</h3>
+<div style="overflow-x:auto;">
+<table id="sessionTable" class="sortable">
+<thead><tr><th>Session</th><th>n_max</th><th>Batch/UB</th><th>Tensor Split</th><th>KV</th><th>ctx</th><th>pp (t/s)</th><th>tg (t/s)</th><th>Acceptance</th><th>Decoded</th><th>Wall Time</th></tr></thead>
+<tbody>
+<tr style="background:#ef444422"><td><strong>23 (Best TG)</strong></td><td>4</td><td>1024/1024</td><td>6,5</td><td>q8/q8 + k4v=64</td><td>262k</td><td>1019.2</td><td><strong>139.86</strong></td><td>76.1%</td><td>13,019</td><td>117.4 s</td></tr>
+<tr><td>21</td><td>3</td><td>1024/1024</td><td>6,5</td><td>q8/q8 + k4v=64</td><td>262k</td><td>1037.1</td><td>116.97</td><td>72.8%</td><td>13,450</td><td>138.9 s</td></tr>
+<tr><td>24</td><td>4</td><td>1024/1024</td><td>6,5</td><td>q8/q8 + k4v=64</td><td>262k</td><td>1030.4</td><td>111.62</td><td>68.6%</td><td>14,914</td><td>157.7 s</td></tr>
+<tr><td>22</td><td>2</td><td>1024/1024</td><td>6,5</td><td>q8/q8 + k4v=64</td><td>262k</td><td>1029.4</td><td>99.97</td><td>67.9%</td><td>14,773</td><td>171.9 s</td></tr>
+<tr><td>19</td><td>6</td><td>1024/1024</td><td>6,5</td><td>q8/q8 + k4v=96</td><td>262k</td><td>1027.2</td><td>96.90</td><td>64.7%</td><td>16,123</td><td>190.5 s</td></tr>
+<tr><td>18</td><td>6</td><td>1024/1024</td><td>6,5</td><td>q8/q8 + k4v=48</td><td>262k</td><td>1039.9</td><td>90.71</td><td>62.8%</td><td>15,474</td><td>194.4 s</td></tr>
+<tr><td>20</td><td>6</td><td>1024/1024</td><td>6,5</td><td>q8/q8 + k4v=24</td><td>262k</td><td>1014.1</td><td>81.21</td><td>65.0%</td><td>14,307</td><td>200.6 s</td></tr>
+<tr><td>12</td><td>6</td><td>1024/1024</td><td>6,5</td><td>f16/f16</td><td>202k</td><td>1037.3</td><td>79.71</td><td>83.0%</td><td>12,672</td><td>182.9 s</td></tr>
+<tr><td>9</td><td>5</td><td>2048/512</td><td>6,5</td><td>f16/f16</td><td>202k</td><td>963.1</td><td>76.35</td><td>82.3%</td><td>14,974</td><td>221.9 s</td></tr>
+<tr><td>16</td><td>4</td><td>1024/1024</td><td>6,5</td><td>f16/f16</td><td>202k</td><td>1039.6</td><td>74.81</td><td>86.3%</td><td>14,602</td><td>219.1 s</td></tr>
+<tr><td>8</td><td>5</td><td>2048/512</td><td>6,5</td><td>q8/q8</td><td>262k</td><td>970.3</td><td>74.46</td><td>83.1%</td><td>13,590</td><td>208.1 s</td></tr>
+<tr><td>14</td><td>5</td><td>1024/1024</td><td>6,5</td><td>f16/f16</td><td>202k</td><td>1036.0</td><td>74.24</td><td>79.7%</td><td>16,465</td><td>245.7 s</td></tr>
+<tr><td>10</td><td>6</td><td>2048/512</td><td>6,5</td><td>f16/f16</td><td>202k</td><td>962.2</td><td>74.17</td><td>76.6%</td><td>13,998</td><td>214.5 s</td></tr>
+<tr><td>11</td><td>6</td><td>4086/1024</td><td>6,5</td><td>f16/f16</td><td>202k</td><td>1001.3</td><td>73.89</td><td>76.0%</td><td>13,960</td><td>213.7 s</td></tr>
+<tr style="background:#a78bfa22"><td><strong>17 (Best PP)</strong></td><td>6</td><td>2048/2048</td><td>6,5</td><td>q8/q8</td><td>202k</td><td><strong>1065.6</strong></td><td>73.33</td><td>78.8%</td><td>15,001</td><td>227.9 s</td></tr>
+<tr><td>6</td><td>4</td><td>2048/512</td><td>6,5</td><td>q8/q8</td><td>262k</td><td>971.7</td><td>73.39</td><td>88.3%</td><td>14,312</td><td>220.6 s</td></tr>
+<tr><td>15</td><td>7</td><td>1024/1024</td><td>6,5</td><td>f16/f16</td><td>192k</td><td>1037.9</td><td>72.57</td><td>71.1%</td><td>13,380</td><td>208.3 s</td></tr>
+<tr><td>13</td><td>6</td><td>1024/512</td><td>6,5</td><td>f16/f16</td><td>202k</td><td>977.2</td><td>72.49</td><td>74.7%</td><td>16,729</td><td>256.2 s</td></tr>
+<tr><td>2</td><td>6</td><td>2048/512</td><td>6,5</td><td>q8/f16</td><td>262k</td><td>966.8</td><td>72.22</td><td>77.2%</td><td>15,034</td><td>233.9 s</td></tr>
+<tr><td>4</td><td>3</td><td>2048/512</td><td>5,5</td><td>q8/f16</td><td>212k</td><td>962.7</td><td>70.55</td><td>91.1%</td><td>14,024</td><td>224.6 s</td></tr>
+<tr><td>3</td><td>6</td><td>2048/512</td><td>5,5</td><td>q8/f16</td><td>212k</td><td>967.3</td><td>68.14</td><td>74.2%</td><td>16,073</td><td>261.6 s</td></tr>
+<tr><td>5</td><td>2</td><td>2048/512</td><td>5,5</td><td>q8/f16</td><td>212k</td><td>965.9</td><td>64.72</td><td>96.7%</td><td>14,746</td><td>253.5 s</td></tr>
+<tr><td>7</td><td>2</td><td>2048/512</td><td>6,5</td><td>q8/q8</td><td>262k</td><td>961.8</td><td>64.18</td><td>93.7%</td><td>13,275</td><td>232.6 s</td></tr>
+<tr><td>25</td><td>3</td><td>1024/1024</td><td>6,5</td><td>q8/q8 + k4v=96</td><td>262k</td><td>1028.4</td><td>61.73</td><td>39.9%</td><td>13,854</td><td>248.6 s</td></tr>
+<tr style="background:#71717a22"><td><strong>1 (Baseline)</strong></td><td>—</td><td>1024/1024</td><td>6,5</td><td>q8/q8 (no spec)</td><td>262k</td><td>1069.5</td><td>33.87</td><td>—</td><td>13,827</td><td>431.5 s</td></tr>
+</tbody>
+</table>
+</div>
+<div class="card full-width" style="margin-top:24px; border-color:#f8717133;">
+<div class="card-title" style="color:#f87171;">Failed Configs</div>
+<table>
+<thead>
+<tr><th style="text-align:left">Config</th><th style="text-align:left">KV</th><th>Split</th><th>Ctx</th><th style="text-align:left">Error</th></tr>
+</thead>
+<tbody>
+<tr><td><code>n=6 -b 2048 -ub 2048</code></td><td>f16/f16</td><td>6,5</td><td>202k</td><td style="text-align:left;color:#f87171">OOM (2594 MiB short)</td></tr>
+<tr><td><code>n=6 -b 2048 -ub 2048</code></td><td>q8/q8</td><td>5,5</td><td>202k</td><td style="text-align:left;color:#f87171">OOM</td></tr>
+<tr><td><code>n=6 -b 2048 -ub 2048</code></td><td>q8/q8</td><td>5,5</td><td>182k</td><td style="text-align:left;color:#f87171">OOM</td></tr>
+<tr><td><code>n=7 -b 1024 -ub 1024</code></td><td>f16/f16</td><td>6,5</td><td>202k</td><td style="text-align:left;color:#f87171">ROCm OOM</td></tr>
+<tr><td>MTP + ngram <code>k4v=128</code></td><td>q8/q8</td><td>—</td><td>262k</td><td style="text-align:left;color:#f87171"><code>GGML_ASSERT(obj_new)</code> after 26,129 decoded</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>Hardware Configuration</h2>
+<div class="grid">
+<div class="card">
+<div class="card-title">GPU</div>
+<table>
+<tr><td>GPU 0</td><td>AMD Radeon RX 7900 XTX</td><td>24 GB GDDR6</td></tr>
+<tr><td>GPU 1</td><td>AMD Radeon RX 7900 XT</td><td>20 GB GDDR6</td></tr>
+<tr><td>Total VRAM</td><td colspan="2">44 GB</td></tr>
+</table>
+</div>
+<div class="card">
+<div class="card-title">Platform</div>
+<table>
+<tr><td>CPU</td><td>AMD Ryzen 7 9700X (8C/16T)</td></tr>
+<tr><td>RAM</td><td>64 GB DDR5</td></tr>
+<tr><td>Motherboard</td><td>MSI MS-iCraft B850 AIGA</td></tr>
+<tr><td>PSU</td><td>1300W</td></tr>
+<tr><td>ROCm</td><td>7.2.2</td></tr>
+<tr><td>OS</td><td>Ubuntu 24.04.4 LTS (Linux 6.17.0-14-generic x86_64)</td></tr>
+</table>
+</div>
+<div class="card full-width">
+<div class="card-title">Inference Stack</div>
+<table>
+<tr><td>Runtime</td><td>llama.cpp (<a href="https://github.com/GoodbyeCain/llama.cpp/tree/fix/split-mode-tensor-quant-kv" style="color:var(--accent)">fork</a>) + ROCm</td></tr>
+<tr><td>Model</td><td>Qwen3.6-27B Q4_K_M GGUF</td></tr>
+<tr><td>Split Mode</td><td><code>tensor</code>, split <code>6,5</code> (XTX:XT)</td></tr>
+<tr><td>KV Unified</td><td>Yes (<code>--kv-unified</code>)</td></tr>
+<tr><td>Parallelism</td><td>auto <code>n_parallel = 4</code></td></tr>
+<tr><td>Prompt</td><td>24,821 tokens (fixed across all sessions)</td></tr>
+<tr><td>Spec Methods</td><td><code>draft-mtp</code> · <code>draft-mtp,ngram-mod,ngram-map-k4v</code> · none (baseline)</td></tr>
+</table>
+</div>
+</div>
+
+</div>
+
+<script>
+const hoverHighlightPlugin = {
+    id: 'hoverHighlight',
+    beforeEvent(chart, args) {
+        const evt = args.event;
+        if (chart.config.type !== 'line') return;
+        const elements = chart.getElementsAtEventForMode(evt, 'dataset', { intersect: false }, false);
+        const hoveredIndex = elements.length > 0 ? elements[0].datasetIndex : -1;
+        let changed = false;
+        chart.data.datasets.forEach((ds, i) => {
+            const isHovered = (i === hoveredIndex);
+            const isBest = ds._isBest;
+            let newWidth, newAlpha;
+            if (hoveredIndex === -1) {
+                newWidth = isBest ? 3 : 1.5;
+                newAlpha = 1;
+            } else if (isHovered) {
+                newWidth = 4;
+                newAlpha = 1;
+            } else {
+                newWidth = 1;
+                newAlpha = 0.15;
+            }
+            if (ds.borderWidth !== newWidth) { ds.borderWidth = newWidth; changed = true; }
+            const baseColor = ds._baseColor || ds.borderColor;
+            if (!ds._baseColor) ds._baseColor = ds.borderColor;
+            let newColor = baseColor;
+            if (newAlpha < 1) {
+                const m = baseColor.match(/^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+                if (m) newColor = `rgba(${parseInt(m[1],16)},${parseInt(m[2],16)},${parseInt(m[3],16)},${newAlpha})`;
+            }
+            if (ds.borderColor !== newColor) { ds.borderColor = newColor; changed = true; }
+        });
+        if (changed) chart.update('none');
+    }
+};
+Chart.register(hoverHighlightPlugin);
+
+new Chart(document.getElementById('chartMTP'), {
+    type: 'line',
+    data: {
+        datasets: [
+            { label: 'S1: baseline (no spec) — 33.87 t/s', data: [{x:100,y:35.20},{x:525,y:35.21},{x:1051,y:35.06},{x:1577,y:35.01},{x:2101,y:34.97},{x:2625,y:34.93},{x:3146,y:34.85},{x:3662,y:34.77},{x:4178,y:34.71},{x:4694,y:34.66},{x:5210,y:34.61},{x:5725,y:34.57},{x:6237,y:34.52},{x:6748,y:34.48},{x:7258,y:34.43},{x:7767,y:34.38},{x:8276,y:34.34},{x:8782,y:34.29},{x:9287,y:34.25},{x:9792,y:34.21},{x:10296,y:34.16},{x:10799,y:34.12},{x:11298,y:34.08},{x:11797,y:34.04},{x:12296,y:34.00},{x:12791,y:33.95},{x:13285,y:33.91},{x:13780,y:33.87}], borderColor: '#71717a', borderWidth: 1.5, tension: 0.3, pointRadius: 0, borderDash: [6,3] },
+            { label: 'S23: n=4, k4v=64 — 76.1% acc (BEST)', data: [{x:102,y:58.24},{x:274,y:57.54},{x:1011,y:128.5},{x:1613,y:148.02},{x:2268,y:162.77},{x:2772,y:162.21},{x:3161,y:155.99},{x:3477,y:149.26},{x:3935,y:149.41},{x:4452,y:150.58},{x:4942,y:150.81},{x:5149,y:143.46},{x:5646,y:144.76},{x:6446,y:152.59},{x:7089,y:156.08},{x:7225,y:148.97},{x:7375,y:143.18},{x:7679,y:140.35},{x:7961,y:137.57},{x:8128,y:132.9},{x:8464,y:131.88},{x:8882,y:131.96},{x:9465,y:134.43},{x:10365,y:140.53},{x:11033,y:143.65},{x:11440,y:143.04},{x:12007,y:144.68},{x:12440,y:144.47},{x:12839,y:143.23},{x:13007,y:140.39}], borderColor: '#ef4444', borderWidth: 3, _isBest: true, tension: 0.3, pointRadius: 0 },
+            { label: 'S21: n=3, k4v=64 — 72.8% acc', data: [{x:100,y:60.17},{x:282,y:60.38},{x:450,y:58.42},{x:623,y:58.15},{x:774,y:56.32},{x:924,y:55.07},{x:1089,y:55.01},{x:1251,y:54.78},{x:1422,y:54.99},{x:2102,y:72.73},{x:2460,y:77.1},{x:2774,y:78.96},{x:3405,y:89.2},{x:3756,y:91.05},{x:4007,y:90.26},{x:4257,y:89.46},{x:4503,y:88.5},{x:4810,y:88.51},{x:5276,y:91.92},{x:5813,y:95.89},{x:6008,y:94.11},{x:6403,y:95.74},{x:6972,y:99.72},{x:7674,y:105.2},{x:8152,y:106.9},{x:8577,y:108.03},{x:9306,y:112.67},{x:9876,y:115.27},{x:10596,y:118.41},{x:11113,y:119.98},{x:11351,y:118.67},{x:12003,y:121.47},{x:12356,y:121.3},{x:12644,y:120.49},{x:13015,y:120.38},{x:13288,y:119.52},{x:13434,y:117.6}], borderColor: '#10b981', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S24: n=4, k4v=64 rerun — 68.6% acc', data: [{x:102,y:55.10},{x:274,y:55.94},{x:447,y:54.94},{x:622,y:55.67},{x:781,y:54.90},{x:981,y:56.89},{x:1107,y:54.06},{x:1279,y:53.82},{x:1410,y:52.56},{x:1530,y:51.27},{x:1654,y:50.35},{x:1783,y:49.67},{x:1952,y:50.12},{x:2094,y:49.87},{x:2259,y:49.31},{x:2428,y:49.72},{x:2580,y:49.77},{x:3106,y:56.46},{x:3758,y:64.71},{x:4416,y:72.16},{x:5039,y:78.35},{x:5435,y:80.68},{x:5758,y:81.50},{x:6089,y:82.27},{x:6658,y:86.19},{x:7195,y:89.53},{x:7387,y:88.45},{x:7800,y:90.12},{x:8480,y:94.40},{x:9170,y:98.78},{x:9541,y:99.13},{x:9630,y:96.97},{x:9800,y:95.63},{x:10024,y:94.68},{x:10379,y:95.28},{x:11060,y:98.77},{x:11865,y:103.12},{x:12539,y:106.04},{x:13142,y:108.20},{x:13735,y:110.26},{x:14347,y:112.27},{x:14811,y:113.24}], borderColor: '#f43f5e', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S22: n=2, k4v=64 — 67.9% acc', data: [{x:100,y:62.96},{x:259,y:56.1},{x:430,y:56.36},{x:606,y:55.69},{x:772,y:55.5},{x:935,y:55.2},{x:1090,y:54.38},{x:1243,y:53.89},{x:1380,y:52.9},{x:1534,y:52.71},{x:1693,y:52.72},{x:1819,y:51.73},{x:1989,y:52.09},{x:2130,y:51.69},{x:2291,y:51.82},{x:2805,y:59.32},{x:3338,y:66.31},{x:3739,y:70.07},{x:4208,y:74.41},{x:4675,y:78.14},{x:4980,y:78.8},{x:5191,y:78.07},{x:5434,y:78.09},{x:5682,y:78.21},{x:5906,y:78.06},{x:6418,y:81.49},{x:6898,y:84.12},{x:7085,y:83.25},{x:7628,y:86.42},{x:8255,y:90.25},{x:8995,y:95},{x:9238,y:94.51},{x:9400,y:93.12},{x:9549,y:91.4},{x:9913,y:91.99},{x:10592,y:95.57},{x:11091,y:97.34},{x:11730,y:100.24},{x:12045,y:100.28},{x:12451,y:101.12},{x:12817,y:101.37},{x:13325,y:102.77},{x:13637,y:102.76},{x:13848,y:102.01},{x:14195,y:101.99},{x:14516,y:101.88},{x:14659,y:100.76}], borderColor: '#8b5cf6', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S19: n=6, k4v=96 — 64.7% acc', data: [{x:100,y:48.89},{x:209,y:41.24},{x:341,y:41.98},{x:469,y:42.08},{x:597,y:42.19},{x:734,y:42.66},{x:890,y:43.98},{x:1012,y:43.5},{x:1135,y:43.12},{x:1264,y:43.04},{x:1399,y:43.13},{x:1500,y:42.28},{x:1600,y:41.53},{x:1718,y:41.37},{x:1841,y:41.33},{x:1965,y:41.25},{x:2122,y:41.89},{x:2252,y:41.97},{x:2382,y:41.99},{x:2491,y:41.67},{x:2606,y:41.49},{x:2734,y:41.51},{x:2839,y:41.21},{x:2977,y:41.39},{x:3096,y:41.32},{x:3249,y:41.67},{x:4045,y:49.84},{x:4699,y:55.51},{x:5590,y:63.64},{x:6119,y:67.29},{x:6489,y:68.92},{x:7011,y:72.03},{x:7200,y:71.76},{x:7369,y:71.06},{x:7622,y:71.38},{x:7996,y:72.68},{x:8365,y:73.86},{x:8569,y:73.67},{x:8866,y:74.05},{x:9445,y:76.84},{x:10212,y:81.08},{x:10690,y:82.73},{x:10860,y:82.11},{x:11198,y:82.57},{x:11329,y:81.73},{x:11661,y:82.34},{x:11780,y:81.24},{x:12415,y:83.85},{x:13199,y:87.29},{x:13973,y:90.52},{x:14511,y:92.2},{x:15139,y:94.28},{x:15746,y:96.21}], borderColor: '#2dd4bf', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S18: n=6, k4v=48 — 62.8% acc', data: [{x:106,y:43.38},{x:238,y:43.38},{x:351,y:41.33},{x:504,y:42.9},{x:636,y:42.94},{x:762,y:42.77},{x:911,y:43.66},{x:1047,y:43.85},{x:1164,y:43.3},{x:1319,y:44.06},{x:1440,y:43.66},{x:1562,y:43.35},{x:1744,y:44.34},{x:1884,y:44.46},{x:2014,y:44.33},{x:2188,y:45.17},{x:2281,y:44.33},{x:2410,y:44.11},{x:2595,y:44.73},{x:2735,y:44.78},{x:2831,y:44.17},{x:2987,y:44.52},{x:3127,y:44.6},{x:3391,y:46.33},{x:3904,y:51.06},{x:4427,y:55.4},{x:4755,y:57.16},{x:5259,y:61.01},{x:5668,y:63.45},{x:5864,y:63.38},{x:6119,y:64},{x:6313,y:63.96},{x:6637,y:65.04},{x:7089,y:67.41},{x:7463,y:68.92},{x:7889,y:70.8},{x:8063,y:70.41},{x:8620,y:73.27},{x:9045,y:74.88},{x:9688,y:78.22},{x:10055,y:79.08},{x:10174,y:77.94},{x:10306,y:77.07},{x:10508,y:76.8},{x:10786,y:77.12},{x:11371,y:79.54},{x:12026,y:82.36},{x:12765,y:85.61},{x:13280,y:87.17},{x:13852,y:89.06},{x:14217,y:89.66},{x:14732,y:91.09},{x:15076,y:91.41},{x:15381,y:91.57}], borderColor: '#f97316', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S20: n=6, k4v=24 — 65.0% acc', data: [{x:100,y:48.7},{x:236,y:46.42},{x:366,y:44.88},{x:499,y:44.6},{x:631,y:44.33},{x:757,y:43.84},{x:891,y:43.84},{x:1050,y:44.94},{x:1175,y:44.48},{x:1297,y:44.07},{x:1443,y:44.38},{x:1594,y:44.86},{x:1824,y:47.2},{x:2384,y:56.91},{x:2715,y:60.41},{x:3071,y:63.98},{x:3456,y:67.59},{x:3814,y:70.37},{x:4146,y:72.45},{x:4300,y:71.32},{x:4458,y:70.36},{x:4694,y:70.67},{x:4905,y:70.47},{x:5174,y:71.2},{x:5465,y:72.17},{x:5665,y:71.87},{x:6023,y:73.46},{x:6162,y:72.51},{x:6338,y:71.97},{x:6503,y:71.35},{x:6648,y:70.38},{x:6834,y:70.11},{x:6984,y:69.49},{x:7203,y:69.58},{x:7463,y:69.98},{x:7865,y:71.65},{x:8327,y:73.74},{x:8738,y:75.32},{x:8949,y:75.14},{x:9161,y:74.88},{x:9414,y:75.07},{x:9745,y:75.82},{x:9995,y:75.97},{x:10446,y:77.62},{x:10814,y:78.53},{x:11242,y:79.89},{x:11556,y:80.37},{x:11913,y:81.09},{x:12150,y:80.98},{x:12574,y:82.03},{x:12885,y:82.38},{x:13154,y:82.49},{x:13401,y:82.42},{x:13655,y:82.46},{x:13939,y:82.64},{x:14162,y:82.46},{x:14279,y:81.47}], borderColor: '#eab308', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S12: n=6, b/ub 1024/1024 — 83.0% acc', data: [{x:102,y:57.14},{x:247,y:51.14},{x:433,y:55.23},{x:689,y:63.5},{x:945,y:67.94},{x:1216,y:71.82},{x:1471,y:73.61},{x:1732,y:75.2},{x:1983,y:76.07},{x:2225,y:76.39},{x:2490,y:77.41},{x:2736,y:77.78},{x:2976,y:77.93},{x:3223,y:78.14},{x:3465,y:78.25},{x:3729,y:78.77},{x:3977,y:78.96},{x:4227,y:79.15},{x:4495,y:79.59},{x:4744,y:79.71},{x:5004,y:80.03},{x:5254,y:80.12},{x:5500,y:80.13},{x:5758,y:80.36},{x:6003,y:80.36},{x:6248,y:80.39},{x:6482,y:80.24},{x:6724,y:80.24},{x:6976,y:80.34},{x:7212,y:80.22},{x:7451,y:80.14},{x:7696,y:80.16},{x:7945,y:80.2},{x:8183,y:80.14},{x:8417,y:80.06},{x:8670,y:80.16},{x:8923,y:80.23},{x:9161,y:80.18},{x:9402,y:80.14},{x:9660,y:80.26},{x:9891,y:80.16},{x:10159,y:80.33},{x:10417,y:80.43},{x:10661,y:80.45},{x:10918,y:80.53},{x:11140,y:80.39},{x:11393,y:80.46},{x:11648,y:80.52},{x:11897,y:80.56},{x:12149,y:80.59},{x:12369,y:80.42},{x:12565,y:80.12}], borderColor: '#4ade80', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S9: n=5, f16/f16 — 82.3% acc', data: [{x:103,y:48.94},{x:244,y:47.5},{x:416,y:51.06},{x:561,y:50.25},{x:713,y:50.16},{x:892,y:51.65},{x:1145,y:56.43},{x:1394,y:59.82},{x:1624,y:61.73},{x:1866,y:63.59},{x:2035,y:62.8},{x:2184,y:61.61},{x:2325,y:60.43},{x:2472,y:59.51},{x:2624,y:58.84},{x:2842,y:59.66},{x:3108,y:61.31},{x:3351,y:62.37},{x:3607,y:63.53},{x:3873,y:64.79},{x:4125,y:65.67},{x:4372,y:66.4},{x:4622,y:67.08},{x:4871,y:67.72},{x:5131,y:68.46},{x:5379,y:68.96},{x:5639,y:69.59},{x:5894,y:70.13},{x:6132,y:70.45},{x:6392,y:70.96},{x:6646,y:71.39},{x:6910,y:71.88},{x:7169,y:72.29},{x:7418,y:72.59},{x:7662,y:72.81},{x:7903,y:73.0},{x:8164,y:73.34},{x:8420,y:73.63},{x:8665,y:73.81},{x:8916,y:74.05},{x:9177,y:74.34},{x:9430,y:74.57},{x:9675,y:74.71},{x:9915,y:74.8},{x:10167,y:74.99},{x:10421,y:75.18},{x:10670,y:75.31},{x:10906,y:75.37},{x:11158,y:75.52},{x:11392,y:75.55},{x:11644,y:75.69},{x:11883,y:75.73},{x:12134,y:75.86},{x:12383,y:75.98},{x:12640,y:76.13},{x:12890,y:76.24},{x:13142,y:76.37},{x:13391,y:76.46},{x:13632,y:76.51},{x:13873,y:76.55},{x:14121,y:76.64},{x:14361,y:76.67},{x:14603,y:76.72},{x:14836,y:76.72}], borderColor: '#22d3ee', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S16: n=4, b/ub 1024/1024 — 86.3% acc', data: [{x:104,y:63.09},{x:307,y:65.27},{x:453,y:58.59},{x:623,y:58.01},{x:786,y:57.19},{x:1026,y:61.12},{x:1190,y:60.13},{x:1385,y:60.65},{x:1631,y:63.01},{x:1871,y:64.75},{x:2116,y:66.26},{x:2351,y:67.25},{x:2526,y:66.49},{x:2671,y:65.08},{x:2828,y:64.2},{x:3008,y:63.89},{x:3249,y:64.8},{x:3502,y:65.87},{x:3748,y:66.69},{x:3997,y:67.48},{x:4255,y:68.35},{x:4491,y:68.79},{x:4738,y:69.37},{x:4979,y:69.81},{x:5224,y:70.27},{x:5476,y:70.76},{x:5714,y:71.06},{x:5961,y:71.42},{x:6203,y:71.71},{x:6441,y:71.95},{x:6674,y:72.1},{x:6920,y:72.38},{x:7170,y:72.68},{x:7417,y:72.95},{x:7661,y:73.15},{x:7896,y:73.27},{x:8141,y:73.49},{x:8387,y:73.71},{x:8638,y:73.94},{x:8876,y:74.05},{x:9119,y:74.17},{x:9361,y:74.29},{x:9596,y:74.37},{x:9838,y:74.5},{x:10078,y:74.6},{x:10318,y:74.7},{x:10562,y:74.82},{x:10797,y:74.86},{x:11045,y:75.0},{x:11282,y:75.07},{x:11526,y:75.17},{x:11749,y:75.13},{x:11986,y:75.19},{x:12225,y:75.27},{x:12463,y:75.33},{x:12700,y:75.4},{x:12947,y:75.5},{x:13179,y:75.52},{x:13416,y:75.57},{x:13642,y:75.55},{x:13880,y:75.6},{x:14101,y:75.56},{x:14324,y:75.53},{x:14495,y:75.23}], borderColor: '#84cc16', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S8: n=5, q8/q8 — 83.1% acc', data: [{x:101,y:50.44},{x:234,y:46.73},{x:398,y:49.46},{x:566,y:51.03},{x:751,y:53.23},{x:866,y:50.47},{x:1053,y:52.11},{x:1277,y:54.87},{x:1488,y:56.61},{x:1718,y:58.53},{x:1910,y:58.98},{x:2141,y:60.47},{x:2311,y:60.07},{x:2463,y:59.31},{x:2570,y:57.71},{x:2738,y:57.58},{x:2989,y:59.05},{x:3240,y:60.39},{x:3465,y:61.15},{x:3728,y:62.45},{x:3976,y:63.4},{x:4208,y:64.01},{x:4450,y:64.69},{x:4681,y:65.18},{x:4929,y:65.83},{x:5168,y:66.36},{x:5396,y:66.68},{x:5646,y:67.22},{x:5902,y:67.78},{x:6142,y:68.16},{x:6382,y:68.52},{x:6631,y:68.94},{x:6890,y:69.46},{x:7147,y:69.91},{x:7393,y:70.25},{x:7642,y:70.57},{x:7874,y:70.72},{x:8132,y:71.11},{x:8387,y:71.43},{x:8642,y:71.75},{x:8871,y:71.86},{x:9111,y:72.01},{x:9353,y:72.19},{x:9587,y:72.31},{x:9832,y:72.5},{x:10061,y:72.54},{x:10271,y:72.45},{x:10521,y:72.64},{x:10757,y:72.73},{x:10986,y:72.77},{x:11222,y:72.88},{x:11461,y:73.01},{x:11694,y:73.09},{x:11930,y:73.19},{x:12164,y:73.27},{x:12396,y:73.32},{x:12621,y:73.33},{x:12869,y:73.49},{x:13106,y:73.55},{x:13348,y:73.66},{x:13572,y:73.67},{x:13804,y:73.7},{x:14044,y:73.79},{x:14282,y:73.85},{x:14523,y:73.94},{x:14737,y:73.89},{x:14925,y:73.7}], borderColor: '#f472b6', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S14: n=5, b/ub 1024/1024 — 79.7% acc', data: [{x:101,y:54.23},{x:273,y:56.11},{x:416,y:52.74},{x:590,y:53.97},{x:768,y:55.0},{x:931,y:54.72},{x:1087,y:54.27},{x:1254,y:54.39},{x:1422,y:54.56},{x:1587,y:54.57},{x:1750,y:54.48},{x:1974,y:56.17},{x:2205,y:57.79},{x:2434,y:59.12},{x:2670,y:60.41},{x:2898,y:61.37},{x:3130,y:62.28},{x:3355,y:62.97},{x:3580,y:63.59},{x:3806,y:64.19},{x:4027,y:64.61},{x:4255,y:65.13},{x:4487,y:65.62},{x:4714,y:66.0},{x:4945,y:66.43},{x:5171,y:66.76},{x:5400,y:67.1},{x:5625,y:67.36},{x:5853,y:67.62},{x:6085,y:67.92},{x:6307,y:68.11},{x:6537,y:68.35},{x:6762,y:68.54},{x:6984,y:68.68},{x:7211,y:68.85},{x:7439,y:69.03},{x:7668,y:69.21},{x:7889,y:69.3},{x:8110,y:69.38},{x:8337,y:69.53},{x:8554,y:69.59},{x:8778,y:69.71},{x:8995,y:69.75},{x:9220,y:69.86},{x:9438,y:69.91},{x:9657,y:69.98},{x:9882,y:70.06},{x:10106,y:70.13},{x:10320,y:70.15},{x:10547,y:70.24},{x:10766,y:70.28},{x:10984,y:70.32},{x:11203,y:70.36},{x:11425,y:70.41},{x:11644,y:70.45},{x:11866,y:70.5},{x:12087,y:70.53},{x:12306,y:70.57},{x:12530,y:70.63},{x:12748,y:70.67},{x:12959,y:70.64},{x:13181,y:70.69},{x:13405,y:70.74},{x:13622,y:70.75},{x:13839,y:70.77},{x:14015,y:70.58}], borderColor: '#d946ef', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S11: n=6, b/ub 4086/1024 — 76.0% acc', data: [{x:100,y:51.62},{x:227,y:45.42},{x:368,y:45.89},{x:490,y:44.2},{x:707,y:50.08},{x:891,y:52.04},{x:1035,y:51.34},{x:1166,y:50.22},{x:1295,y:49.31},{x:1432,y:48.83},{x:1554,y:48.04},{x:1687,y:47.69},{x:1875,y:48.82},{x:2123,y:51.2},{x:2374,y:53.34},{x:2621,y:55.11},{x:2892,y:57.13},{x:3136,y:58.46},{x:3375,y:59.58},{x:3623,y:60.71},{x:3870,y:61.69},{x:4128,y:62.79},{x:4377,y:63.63},{x:4643,y:64.66},{x:4901,y:65.49},{x:5161,y:66.27},{x:5420,y:66.99},{x:5666,y:67.47},{x:5935,y:68.2},{x:6178,y:68.63},{x:6438,y:69.19},{x:6685,y:69.57},{x:6928,y:69.86},{x:7200,y:70.43},{x:7435,y:70.6},{x:7691,y:70.98},{x:7934,y:71.21},{x:8174,y:71.42},{x:8439,y:71.81},{x:8666,y:71.89},{x:8870,y:71.77},{x:9118,y:71.99},{x:9321,y:71.89},{x:9515,y:71.72},{x:9748,y:71.85},{x:9991,y:72.04},{x:10240,y:72.26},{x:10485,y:72.44},{x:10728,y:72.61},{x:10978,y:72.79},{x:11221,y:72.93},{x:11488,y:73.23},{x:11734,y:73.36},{x:11985,y:73.52},{x:12242,y:73.73},{x:12490,y:73.87},{x:12741,y:74.02},{x:12992,y:74.18},{x:13241,y:74.33},{x:13485,y:74.43},{x:13700,y:74.38},{x:13895,y:74.22}], borderColor: '#fb923c', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S10: n=6, f16/f16 — 76.6% acc', data: [{x:105,y:44.3},{x:260,y:47.79},{x:404,y:47.66},{x:542,y:47.06},{x:711,y:48.94},{x:930,y:53.0},{x:1053,y:51.12},{x:1186,y:50.21},{x:1321,y:49.59},{x:1456,y:49.08},{x:1594,y:48.74},{x:1775,y:49.67},{x:2024,y:52.2},{x:2288,y:54.68},{x:2549,y:56.76},{x:2800,y:58.4},{x:3047,y:59.8},{x:3297,y:61.03},{x:3545,y:62.12},{x:3788,y:63.05},{x:4043,y:64.02},{x:4292,y:64.86},{x:4534,y:65.48},{x:4784,y:66.19},{x:5047,y:67.01},{x:5289,y:67.52},{x:5544,y:68.09},{x:5803,y:68.71},{x:6054,y:69.22},{x:6313,y:69.75},{x:6563,y:70.17},{x:6808,y:70.46},{x:7072,y:70.94},{x:7327,y:71.32},{x:7590,y:71.74},{x:7835,y:71.99},{x:8076,y:72.2},{x:8329,y:72.51},{x:8569,y:72.67},{x:8794,y:72.72},{x:9004,y:72.62},{x:9233,y:72.69},{x:9456,y:72.7},{x:9695,y:72.83},{x:9931,y:72.95},{x:10174,y:73.12},{x:10415,y:73.25},{x:10672,y:73.49},{x:10916,y:73.62},{x:11164,y:73.78},{x:11403,y:73.9},{x:11649,y:74.02},{x:11909,y:74.23},{x:12153,y:74.36},{x:12409,y:74.54},{x:12648,y:74.63},{x:12870,y:74.61},{x:13129,y:74.79},{x:13365,y:74.84},{x:13602,y:74.88},{x:13829,y:74.87},{x:13969,y:74.41}], borderColor: '#60a5fa', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S6: n=4, q8/q8 — 88.3% acc', data: [{x:100,y:54.99},{x:272,y:56.18},{x:431,y:54.96},{x:609,y:55.99},{x:833,y:59.89},{x:1003,y:59.12},{x:1221,y:61.0},{x:1397,y:60.59},{x:1554,y:59.54},{x:1717,y:58.94},{x:1864,y:57.91},{x:2046,y:58.08},{x:2285,y:59.77},{x:2523,y:61.16},{x:2757,y:62.24},{x:3001,y:63.42},{x:3255,y:64.64},{x:3498,y:65.52},{x:3737,y:66.24},{x:3980,y:66.98},{x:4214,y:67.46},{x:4459,y:68.1},{x:4694,y:68.5},{x:4937,y:68.97},{x:5179,y:69.41},{x:5420,y:69.83},{x:5661,y:70.2},{x:5898,y:70.49},{x:6143,y:70.85},{x:6388,y:71.18},{x:6620,y:71.35},{x:6865,y:71.63},{x:7102,y:71.82},{x:7339,y:72.0},{x:7581,y:72.24},{x:7824,y:72.45},{x:8056,y:72.57},{x:8276,y:72.58},{x:8509,y:72.7},{x:8751,y:72.88},{x:8976,y:72.92},{x:9193,y:72.9},{x:9416,y:72.93},{x:9639,y:72.94},{x:9866,y:72.98},{x:10097,y:73.06},{x:10329,y:73.12},{x:10557,y:73.16},{x:10788,y:73.22},{x:11021,y:73.28},{x:11249,y:73.32},{x:11483,y:73.4},{x:11713,y:73.46},{x:11934,y:73.46},{x:12165,y:73.52},{x:12391,y:73.55},{x:12624,y:73.61},{x:12842,y:73.59},{x:13063,y:73.57},{x:13298,y:73.63},{x:13532,y:73.69},{x:13769,y:73.75},{x:13988,y:73.73},{x:14196,y:73.65}], borderColor: '#6c8eef', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S17: n=6, b/ub 2048/2048, q8/q8 — 78.8% acc', data: [{x:101,y:50.66},{x:262,y:51.75},{x:415,y:51.23},{x:563,y:50.53},{x:690,y:48.75},{x:821,y:47.8},{x:956,y:47.35},{x:1195,y:51.48},{x:1431,y:54.47},{x:1676,y:57.13},{x:1891,y:58.42},{x:2110,y:59.55},{x:2224,y:57.77},{x:2346,y:56.44},{x:2500,y:56.04},{x:2649,y:55.6},{x:2815,y:55.49},{x:3063,y:56.95},{x:3309,y:58.27},{x:3554,y:59.42},{x:3804,y:60.56},{x:4059,y:61.62},{x:4303,y:62.42},{x:4527,y:62.89},{x:4764,y:63.49},{x:4998,y:64.02},{x:5244,y:64.66},{x:5466,y:64.96},{x:5712,y:65.52},{x:5963,y:66.08},{x:6188,y:66.35},{x:6436,y:66.81},{x:6680,y:67.24},{x:6928,y:67.69},{x:7185,y:68.2},{x:7436,y:68.62},{x:7691,y:69.01},{x:7921,y:69.19},{x:8173,y:69.54},{x:8418,y:69.82},{x:8663,y:70.09},{x:8878,y:70.11},{x:9114,y:70.29},{x:9351,y:70.45},{x:9606,y:70.74},{x:9853,y:70.98},{x:10089,y:71.14},{x:10347,y:71.42},{x:10565,y:71.43},{x:10806,y:71.58},{x:11023,y:71.59},{x:11257,y:71.71},{x:11491,y:71.79},{x:11717,y:71.84},{x:11953,y:71.97},{x:12194,y:72.09},{x:12419,y:72.13},{x:12658,y:72.25},{x:12899,y:72.36},{x:13130,y:72.43},{x:13360,y:72.48},{x:13590,y:72.52},{x:13813,y:72.52},{x:14053,y:72.62},{x:14294,y:72.72},{x:14529,y:72.8},{x:14746,y:72.77},{x:14935,y:72.61}], borderColor: '#a78bfa', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S15: n=7, b/ub 1024/1024 — 71.1% acc', data: [{x:106,y:48.34},{x:233,y:44.51},{x:389,y:46.8},{x:525,y:46.38},{x:643,y:44.75},{x:779,y:44.82},{x:928,y:45.47},{x:1071,y:45.72},{x:1265,y:47.81},{x:1528,y:51.82},{x:1760,y:54.06},{x:2016,y:56.7},{x:2271,y:58.85},{x:2516,y:60.4},{x:2763,y:61.81},{x:3005,y:62.98},{x:3237,y:63.73},{x:3471,y:64.46},{x:3703,y:65.11},{x:3934,y:65.65},{x:4171,y:66.28},{x:4417,y:66.99},{x:4654,y:67.44},{x:4902,y:68.03},{x:5157,y:68.64},{x:5406,y:69.15},{x:5660,y:69.69},{x:5908,y:70.08},{x:6149,y:70.38},{x:6389,y:70.69},{x:6629,y:70.95},{x:6868,y:71.19},{x:7116,y:71.52},{x:7345,y:71.64},{x:7597,y:71.97},{x:7835,y:72.12},{x:8043,y:72.01},{x:8271,y:72.1},{x:8477,y:72.01},{x:8686,y:71.91},{x:8877,y:71.67},{x:9107,y:71.78},{x:9335,y:71.85},{x:9574,y:72.01},{x:9821,y:72.19},{x:10056,y:72.3},{x:10308,y:72.54},{x:10545,y:72.65},{x:10768,y:72.64},{x:11023,y:72.87},{x:11268,y:73.02},{x:11495,y:73.07},{x:11734,y:73.16},{x:11966,y:73.23},{x:12190,y:73.24},{x:12460,y:73.5},{x:12699,y:73.6},{x:12920,y:73.6},{x:13143,y:73.58},{x:13287,y:73.13}], borderColor: '#38bdf8', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S13: n=6, b/ub 1024/512 — 74.7% acc', data: [{x:103,y:47.86},{x:255,y:48.85},{x:376,y:45.54},{x:523,y:46.33},{x:672,y:46.99},{x:817,y:47.19},{x:999,y:49.16},{x:1122,y:48.01},{x:1331,y:50.44},{x:1565,y:53.15},{x:1709,y:52.64},{x:1852,y:52.13},{x:2029,y:52.62},{x:2236,y:53.76},{x:2451,y:54.96},{x:2710,y:56.9},{x:2947,y:58.12},{x:3147,y:58.55},{x:3380,y:59.52},{x:3530,y:58.99},{x:3667,y:58.29},{x:3805,y:57.69},{x:3910,y:56.66},{x:4133,y:57.34},{x:4390,y:58.45},{x:4645,y:59.45},{x:4903,y:60.42},{x:5166,y:61.38},{x:5398,y:61.89},{x:5643,y:62.5},{x:5882,y:63.03},{x:6126,y:63.57},{x:6374,y:64.13},{x:6600,y:64.46},{x:6841,y:64.88},{x:7092,y:65.36},{x:7345,y:65.86},{x:7612,y:66.46},{x:7849,y:66.77},{x:8108,y:67.21},{x:8366,y:67.64},{x:8612,y:67.95},{x:8862,y:68.28},{x:9100,y:68.52},{x:9351,y:68.85},{x:9585,y:69.05},{x:9832,y:69.3},{x:10063,y:69.46},{x:10317,y:69.74},{x:10557,y:69.93},{x:10808,y:70.17},{x:11080,y:70.55},{x:11328,y:70.75},{x:11579,y:70.96},{x:11825,y:71.15},{x:12060,y:71.25},{x:12300,y:71.39},{x:12559,y:71.63},{x:12812,y:71.81},{x:13057,y:71.97},{x:13288,y:72.04},{x:13533,y:72.17},{x:13763,y:72.22},{x:13994,y:72.29},{x:14253,y:72.48},{x:14506,y:72.65},{x:14739,y:72.71},{x:14996,y:72.88},{x:15228,y:72.93},{x:15472,y:73.03},{x:15714,y:73.12},{x:15953,y:73.2},{x:16193,y:73.29},{x:16416,y:73.28},{x:16609,y:73.15},{x:16705,y:72.6}], borderColor: '#94a3b8', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S2: n=6, q8/f16 — 77.2% acc', data: [{x:102,y:57.26},{x:263,y:54.4},{x:416,y:52.98},{x:568,y:52.23},{x:713,y:51.16},{x:856,y:50.5},{x:1011,y:50.67},{x:1143,y:49.76},{x:1304,y:50.11},{x:1566,y:53.89},{x:1827,y:56.94},{x:2081,y:59.22},{x:2330,y:61.02},{x:2580,y:62.59},{x:2830,y:63.9},{x:3073,y:64.96},{x:3319,y:65.94},{x:3563,y:66.73},{x:3806,y:67.48},{x:4063,y:68.36},{x:4307,y:68.98},{x:4547,y:69.44},{x:4780,y:69.75},{x:5020,y:70.16},{x:5270,y:70.64},{x:5520,y:71.1},{x:5770,y:71.56},{x:6023,y:71.98},{x:6263,y:72.22},{x:6515,y:72.6},{x:6775,y:73.0},{x:7026,y:73.32},{x:7273,y:73.56},{x:7516,y:73.73},{x:7761,y:73.93},{x:8004,y:74.12},{x:8249,y:74.29},{x:8461,y:74.19},{x:8704,y:74.32},{x:8930,y:74.32},{x:9142,y:74.22},{x:9371,y:74.23},{x:9622,y:74.43},{x:9850,y:74.43},{x:10091,y:74.52},{x:10330,y:74.61},{x:10571,y:74.72},{x:10806,y:74.78},{x:11040,y:74.81},{x:11279,y:74.9},{x:11516,y:74.95},{x:11759,y:75.06},{x:11985,y:75.05},{x:12223,y:75.1},{x:12455,y:75.12},{x:12689,y:75.17},{x:12935,y:75.27},{x:13165,y:75.28},{x:13377,y:75.19},{x:13538,y:74.82}], borderColor: '#14b8a6', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S4: n=3, q8/f16 — 91.1% acc', data: [{x:100,y:53.7},{x:273,y:55.72},{x:433,y:54.7},{x:596,y:54.58},{x:753,y:53.98},{x:922,y:54.34},{x:1083,y:54.18},{x:1256,y:54.55},{x:1437,y:55.17},{x:1615,y:55.54},{x:1805,y:56.22},{x:2013,y:57.33},{x:2219,y:58.16},{x:2422,y:58.85},{x:2629,y:59.53},{x:2829,y:59.96},{x:3034,y:60.43},{x:3235,y:60.78},{x:3438,y:61.12},{x:3643,y:61.47},{x:3842,y:61.7},{x:4046,y:61.96},{x:4248,y:62.17},{x:4452,y:62.39},{x:4657,y:62.59},{x:4863,y:62.81},{x:5066,y:62.96},{x:5257,y:62.98},{x:5460,y:63.11},{x:5662,y:63.25},{x:5862,y:63.34},{x:6065,y:63.47},{x:6260,y:63.5},{x:6460,y:63.58},{x:6664,y:63.68},{x:6863,y:63.74},{x:7067,y:63.84},{x:7265,y:63.87},{x:7466,y:63.93},{x:7669,y:64.02},{x:7870,y:64.07},{x:8073,y:64.14},{x:8264,y:64.12},{x:8460,y:64.14},{x:8661,y:64.21},{x:8859,y:64.24},{x:9060,y:64.3},{x:9257,y:64.32},{x:9449,y:64.3},{x:9646,y:64.32},{x:9841,y:64.32},{x:10040,y:64.35},{x:10241,y:64.39},{x:10430,y:64.36},{x:10627,y:64.37},{x:10825,y:64.39},{x:11022,y:64.4},{x:11218,y:64.41},{x:11414,y:64.41},{x:11611,y:64.43},{x:11799,y:64.39},{x:12000,y:64.43},{x:12192,y:64.42},{x:12384,y:64.41},{x:12578,y:64.41},{x:12772,y:64.4},{x:12966,y:64.4},{x:13153,y:64.36}], borderColor: '#fbbf24', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S3: n=6, 5:5 — 74.2% acc', data: [{x:103,y:38.84},{x:249,y:43.82},{x:368,y:42.11},{x:494,y:41.98},{x:641,y:43.24},{x:836,y:46.75},{x:1038,y:49.52},{x:1239,y:51.58},{x:1424,y:52.64},{x:1642,y:54.5},{x:1779,y:53.64},{x:1887,y:52.1},{x:2014,y:51.28},{x:2124,y:50.18},{x:2307,y:50.89},{x:2487,y:51.41},{x:2708,y:52.66},{x:2919,y:53.62},{x:3135,y:54.55},{x:3333,y:55.09},{x:3438,y:54.1},{x:3589,y:53.9},{x:3717,y:53.39},{x:3862,y:53.16},{x:4005,y:52.91},{x:4245,y:53.91},{x:4483,y:54.84},{x:4732,y:55.81},{x:4980,y:56.71},{x:5225,y:57.54},{x:5466,y:58.25},{x:5706,y:58.9},{x:5918,y:59.21},{x:6161,y:59.8},{x:6399,y:60.32},{x:6633,y:60.78},{x:6872,y:61.25},{x:7113,y:61.75},{x:7331,y:62.02},{x:7558,y:62.33},{x:7796,y:62.72},{x:8039,y:63.15},{x:8282,y:63.55},{x:8523,y:63.92},{x:8760,y:64.23},{x:8976,y:64.4},{x:9224,y:64.75},{x:9467,y:65.07},{x:9696,y:65.27},{x:9921,y:65.43},{x:10168,y:65.73},{x:10400,y:65.92},{x:10646,y:66.2},{x:10882,y:66.42},{x:11114,y:66.6},{x:11345,y:66.77},{x:11573,y:66.92},{x:11804,y:67.07},{x:12014,y:67.09},{x:12256,y:67.31},{x:12480,y:67.42},{x:12702,y:67.52},{x:12921,y:67.6},{x:13158,y:67.76},{x:13386,y:67.86},{x:13620,y:67.98},{x:13860,y:68.14},{x:14093,y:68.22},{x:14330,y:68.36},{x:14544,y:68.38},{x:14760,y:68.42},{x:14972,y:68.44},{x:15207,y:68.55},{x:15417,y:68.55},{x:15639,y:68.61},{x:15838,y:68.58},{x:16014,y:68.43}], borderColor: '#86efac', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S5: n=2, 5:5 — 96.7% acc', data: [{x:102,y:62.69},{x:267,y:57.47},{x:471,y:61.57},{x:652,y:61.06},{x:856,y:62.44},{x:1045,y:62.51},{x:1255,y:63.57},{x:1459,y:64.11},{x:1660,y:64.35},{x:1856,y:64.36},{x:2022,y:63.45},{x:2198,y:62.98},{x:2371,y:62.5},{x:2575,y:62.81},{x:2782,y:63.19},{x:2986,y:63.44},{x:3193,y:63.72},{x:3394,y:63.89},{x:3598,y:64.03},{x:3801,y:64.19},{x:4001,y:64.3},{x:4205,y:64.45},{x:4406,y:64.53},{x:4606,y:64.61},{x:4810,y:64.73},{x:5011,y:64.81},{x:5214,y:64.9},{x:5413,y:64.95},{x:5610,y:64.97},{x:5814,y:65.05},{x:6014,y:65.08},{x:6218,y:65.14},{x:6419,y:65.17},{x:6617,y:65.19},{x:6817,y:65.22},{x:7015,y:65.24},{x:7216,y:65.28},{x:7416,y:65.31},{x:7614,y:65.31},{x:7814,y:65.33},{x:8011,y:65.32},{x:8212,y:65.35},{x:8413,y:65.36},{x:8609,y:65.35},{x:8809,y:65.36},{x:9004,y:65.34},{x:9202,y:65.35},{x:9391,y:65.28},{x:9587,y:65.27},{x:9782,y:65.26},{x:9974,y:65.23},{x:10167,y:65.21},{x:10359,y:65.18},{x:10553,y:65.17},{x:10754,y:65.19},{x:10949,y:65.18},{x:11147,y:65.19},{x:11342,y:65.17},{x:11536,y:65.14},{x:11734,y:65.15},{x:11928,y:65.14},{x:12123,y:65.14},{x:12314,y:65.11},{x:12506,y:65.09},{x:12702,y:65.08},{x:12897,y:65.07},{x:13092,y:65.06},{x:13288,y:65.05},{x:13482,y:65.03},{x:13677,y:65.03},{x:13869,y:65.0},{x:14064,y:65.0},{x:14259,y:64.99},{x:14451,y:64.97},{x:14635,y:64.92}], borderColor: '#f87171', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S7: n=2, q8/q8 — 93.7% acc', data: [{x:101,y:63.44},{x:243,y:52.58},{x:366,y:48.0},{x:511,y:47.92},{x:667,y:48.78},{x:840,y:50.33},{x:1076,y:54.5},{x:1245,y:54.71},{x:1386,y:53.71},{x:1553,y:53.9},{x:1818,y:57.09},{x:2039,y:58.45},{x:2307,y:60.8},{x:2554,y:62.38},{x:2760,y:62.8},{x:3000,y:63.82},{x:3245,y:64.81},{x:3469,y:65.32},{x:3616,y:64.42},{x:3750,y:63.37},{x:3900,y:62.71},{x:4048,y:62.05},{x:4301,y:63.0},{x:4565,y:64.02},{x:4797,y:64.5},{x:5032,y:65.02},{x:5289,y:65.79},{x:5529,y:66.3},{x:5774,y:66.83},{x:6019,y:67.3},{x:6281,y:67.93},{x:6528,y:68.35},{x:6781,y:68.8},{x:7026,y:69.16},{x:7287,y:69.64},{x:7530,y:69.93},{x:7771,y:70.19},{x:8024,y:70.56},{x:8282,y:70.93},{x:8536,y:71.25},{x:8793,y:71.57},{x:9035,y:71.77},{x:9278,y:71.94},{x:9543,y:72.31},{x:9781,y:72.46},{x:10030,y:72.67},{x:10287,y:72.95},{x:10540,y:73.17},{x:10792,y:73.38},{x:11041,y:73.54},{x:11286,y:73.68},{x:11526,y:73.78},{x:11775,y:73.93},{x:12009,y:73.99},{x:12229,y:73.98},{x:12470,y:74.06},{x:12722,y:74.21},{x:12963,y:74.31},{x:13219,y:74.47},{x:13458,y:74.55},{x:13700,y:74.63},{x:13948,y:74.75},{x:14193,y:74.83},{x:14451,y:74.98},{x:14693,y:75.07},{x:14945,y:75.18},{x:15177,y:75.19},{x:15421,y:75.27},{x:15660,y:75.33},{x:15890,y:75.33},{x:16103,y:75.25},{x:16283,y:75.01},{x:16407,y:74.55}], borderColor: '#c084fc', borderWidth: 1.5, tension: 0.3, pointRadius: 0 },
+            { label: 'S25: n=3, k4v=96 — 39.9% acc', data: [{x:101,y:58.40},{x:269,y:56.51},{x:458,y:58.93},{x:632,y:58.47},{x:806,y:58.21},{x:970,y:56.42},{x:1100,y:54.34},{x:1278,y:54.95},{x:1434,y:54.60},{x:1596,y:54.53},{x:1732,y:53.60},{x:1894,y:53.53},{x:2059,y:53.64},{x:2217,y:53.50},{x:2616,y:58.71},{x:3356,y:70.24},{x:3519,y:69.03},{x:3644,y:67.17},{x:3855,y:67.28},{x:4018,y:66.54},{x:4395,y:69.29},{x:4577,y:68.59},{x:4810,y:68.92},{x:4929,y:67.69},{x:5040,y:66.24},{x:5170,y:65.37},{x:5301,y:64.47},{x:5430,y:63.44},{x:5585,y:63.04},{x:5699,y:62.04},{x:5860,y:61.59},{x:6037,y:61.46},{x:6254,y:61.76},{x:6409,y:61.26},{x:6503,y:60.31},{x:6621,y:59.74},{x:6768,y:59.45},{x:6858,y:58.42},{x:7002,y:58.16},{x:7425,y:60.16},{x:7749,y:61.25},{x:7938,y:61.21},{x:8031,y:60.51},{x:8260,y:60.78},{x:8429,y:60.66},{x:8623,y:60.74},{x:8823,y:60.72},{x:9106,y:61.37},{x:9475,y:62.57},{x:9750,y:63.13},{x:10088,y:64.02},{x:10265,y:63.92},{x:10444,y:63.83},{x:10805,y:64.76},{x:10966,y:64.56},{x:11131,y:64.36},{x:11336,y:64.42},{x:11537,y:64.33},{x:11696,y:64.13},{x:11842,y:63.79},{x:11974,y:63.47},{x:12134,y:63.31},{x:12293,y:63.14},{x:12566,y:63.49},{x:12722,y:63.24},{x:12877,y:63.07},{x:13070,y:62.98},{x:13257,y:62.87},{x:13382,y:62.57},{x:13533,y:62.35},{x:13669,y:62.02},{x:13819,y:61.84}], borderColor: '#64748b', borderWidth: 1.5, tension: 0.3, pointRadius: 0 }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'nearest', axis: 'xy', intersect: false },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    title: function(items) { return items[0] ? items[0].dataset.label : ''; },
+                    label: function(ctx) { return 'n_decoded: ' + ctx.parsed.x + '  tg: ' + ctx.parsed.y + ' t/s'; }
+                }
+            }
+        },
+        scales: {
+            x: { type: 'linear', title: { display: true, text: 'Decoded Tokens', color: '#8b90a0' }, ticks: { color: '#8b90a0', stepSize: 1000, callback: function(v) { return v >= 1000 ? (v/1000)+'k' : v; } }, grid: { color: '#2a2e3a' }, min: 0, max: 17000 },
+            y: { title: { display: true, text: 't/s', color: '#8b90a0' }, ticks: { color: '#8b90a0', stepSize: 20 }, grid: { color: '#2a2e3a' }, min: 30, max: 170 }
+        }
+    }
+});
+
+new Chart(document.getElementById('chartMTPPrefill'), {
+    type: 'line',
+    data: {
+        datasets: [
+            { label: 'S12: n=6, b/ub 1024/1024', data: [{x:4096,y:1172.39},{x:5120,y:1186.31},{x:6144,y:1191.02},{x:7168,y:1191.58},{x:8192,y:1189.15},{x:9216,y:1171.37},{x:10240,y:1167.01},{x:11264,y:1161.83},{x:12288,y:1155.79},{x:13312,y:1148.85},{x:14336,y:1141.3},{x:15360,y:1133.54},{x:16384,y:1125.53},{x:17408,y:1111.8},{x:18432,y:1103.95},{x:19456,y:1095.91},{x:20480,y:1087.79},{x:21504,y:1079.54},{x:22528,y:1071.3},{x:23552,y:1062.97},{x:23797,y:1056.8},{x:24817,y:1044.91}], borderColor: '#4ade80', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S9: n=5, f16/f16', data: [{x:4096,y:1096.45},{x:6144,y:1106.4},{x:8192,y:1101.32},{x:10240,y:1077.66},{x:12288,y:1066.3},{x:14336,y:1053.57},{x:16384,y:1039.32},{x:18432,y:1019.11},{x:20480,y:1005.08},{x:22528,y:990.63},{x:24305,y:976.3},{x:24817,y:969.62}], borderColor: '#22d3ee', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S16: n=4, b/ub 1024/1024', data: [{x:4096,y:1227.29},{x:5120,y:1229.45},{x:6144,y:1225.93},{x:7168,y:1221.45},{x:8192,y:1214.01},{x:9216,y:1191.37},{x:10240,y:1184.52},{x:11264,y:1176.88},{x:12288,y:1168.78},{x:13312,y:1160.38},{x:14336,y:1151.7},{x:15360,y:1142.76},{x:16384,y:1133.71},{x:17408,y:1118.98},{x:18432,y:1110.19},{x:19456,y:1101.35},{x:20480,y:1092.35},{x:21504,y:1083.43},{x:22528,y:1074.62},{x:23552,y:1065.8},{x:23797,y:1059.43},{x:24817,y:1047.08}], borderColor: '#84cc16', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S8: n=5, q8/q8', data: [{x:4096,y:1284.17},{x:6144,y:1276.3},{x:8192,y:1260.81},{x:10240,y:1222.97},{x:12288,y:1204.75},{x:14336,y:1185.72},{x:16384,y:1166.72},{x:18432,y:1141.96},{x:20480,y:1123.04},{x:22528,y:1104.51},{x:22773,y:1094.35},{x:24817,y:1074.94}], borderColor: '#f472b6', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S14: n=5, b/ub 1024/1024', data: [{x:4096,y:1080.3},{x:6144,y:1089.99},{x:8192,y:1086.12},{x:10240,y:1065.82},{x:12288,y:1055.81},{x:14336,y:1043.98},{x:16384,y:1031.08},{x:18432,y:1013.4},{x:20480,y:1000.56},{x:22528,y:987.32},{x:24305,y:974.39},{x:24817,y:969.0}], borderColor: '#d946ef', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S11: n=6, b/ub 4086/1024', data: [{x:4086,y:1132.09},{x:8172,y:1145.03},{x:12258,y:1109.95},{x:16344,y:1075.54},{x:20430,y:1045.92},{x:23793,y:1017.89},{x:24817,y:1008.3}], borderColor: '#fb923c', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S10: n=6, f16/f16', data: [{x:4096,y:1096.19},{x:6144,y:1106.03},{x:8192,y:1100.75},{x:10240,y:1077.34},{x:12288,y:1065.83},{x:14336,y:1052.85},{x:16384,y:1038.62},{x:18432,y:1018.4},{x:20480,y:1004.35},{x:22528,y:989.87},{x:24305,y:975.45},{x:24817,y:968.78}], borderColor: '#60a5fa', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S6: n=4, q8/q8', data: [{x:4096,y:1109.99},{x:6144,y:1118.66},{x:8192,y:1113.12},{x:10240,y:1089.34},{x:12288,y:1077.14},{x:14336,y:1063.51},{x:16384,y:1048.61},{x:18432,y:1028.22},{x:20480,y:1013.84},{x:22528,y:998.9},{x:24305,y:984.13},{x:24817,y:978.04}], borderColor: '#6c8eef', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S17: n=6, b/ub 2048/2048, q8/q8', data: [{x:4096,y:1083.55},{x:6144,y:1100.12},{x:8192,y:1098.57},{x:10240,y:1077.41},{x:12288,y:1067.36},{x:14336,y:1055.18},{x:16384,y:1041.33},{x:18432,y:1021.79},{x:20480,y:1008.01},{x:22528,y:993.55},{x:24305,y:979.25},{x:24817,y:973.21}], borderColor: '#a78bfa', borderWidth: 3, tension: 0.3, _isBest: true, pointRadius: 2 },
+            { label: 'S15: n=7, b/ub 1024/1024', data: [{x:4096,y:1203.57},{x:5120,y:1211.06},{x:6144,y:1212.0},{x:7168,y:1209.89},{x:8192,y:1205.04},{x:9216,y:1176.17},{x:10240,y:1171.46},{x:11264,y:1165.53},{x:12288,y:1158.88},{x:13312,y:1151.51},{x:14336,y:1143.76},{x:15360,y:1135.64},{x:16384,y:1127.5},{x:17408,y:1113.86},{x:18432,y:1105.62},{x:19456,y:1097.35},{x:20480,y:1088.98},{x:21504,y:1080.59},{x:22528,y:1072.21},{x:23552,y:1063.71},{x:23797,y:1057.44},{x:24817,y:1045.51}], borderColor: '#38bdf8', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S13: n=6, b/ub 1024/512', data: [{x:4096,y:1134.58},{x:5120,y:1138.72},{x:6144,y:1138.01},{x:7168,y:1125.55},{x:8192,y:1121.42},{x:9216,y:1100.87},{x:10240,y:1095.89},{x:11264,y:1090.24},{x:12288,y:1083.87},{x:13312,y:1077.28},{x:14336,y:1070.42},{x:15360,y:1063.22},{x:16384,y:1055.73},{x:17408,y:1041.85},{x:18432,y:1034.68},{x:19456,y:1027.57},{x:20480,y:1020.42},{x:21504,y:1013.19},{x:22528,y:1005.67},{x:23552,y:998.25},{x:24305,y:991.14},{x:24817,y:984.02}], borderColor: '#94a3b8', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S2: n=6, q8/f16', data: [{x:4096,y:1111.29},{x:6144,y:1119.12},{x:8192,y:1105.77},{x:10240,y:1083.5},{x:12288,y:1072.4},{x:14336,y:1059.65},{x:16384,y:1045.5},{x:18432,y:1025.91},{x:20480,y:1011.88},{x:22528,y:997.41},{x:24305,y:982.8},{x:24817,y:976.6}], borderColor: '#14b8a6', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S4: n=3, q8/f16', data: [{x:4096,y:1113.54},{x:6144,y:1117.79},{x:8192,y:1101.69},{x:10240,y:1077.32},{x:12288,y:1065.32},{x:14336,y:1051.81},{x:16384,y:1037.08},{x:18432,y:1016.85},{x:20480,y:1002.44},{x:22528,y:987.68},{x:24305,y:973.06},{x:24817,y:966.85}], borderColor: '#fbbf24', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S3: n=6, 5:5', data: [{x:4096,y:1092.6},{x:6144,y:1094.89},{x:8192,y:1091.18},{x:10240,y:1070.72},{x:12288,y:1060.67},{x:14336,y:1048.76},{x:16384,y:1035.81},{x:18432,y:1018.15},{x:20480,y:1005.4},{x:22528,y:992.22},{x:24305,y:979.31},{x:24817,y:973.73}], borderColor: '#86efac', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S5: n=2, 5:5', data: [{x:4096,y:1077.85},{x:6144,y:1089.75},{x:8192,y:1086.77},{x:10240,y:1066.95},{x:12288,y:1057.32},{x:14336,y:1045.4},{x:16384,y:1032.52},{x:18432,y:1014.86},{x:20480,y:1002.16},{x:22528,y:989.24},{x:24305,y:976.46},{x:24817,y:971.08}], borderColor: '#f87171', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+            { label: 'S7: n=2, q8/q8', data: [{x:4096,y:1213.78},{x:5120,y:1218.65},{x:6144,y:1216.74},{x:7168,y:1212.27},{x:8192,y:1205.84},{x:9216,y:1184.56},{x:10240,y:1178.26},{x:11264,y:1171.12},{x:12288,y:1163.3},{x:13312,y:1155.02},{x:14336,y:1146.73},{x:15360,y:1138.09},{x:16384,y:1129.31},{x:17408,y:1114.77},{x:18432,y:1106.22},{x:19456,y:1097.63},{x:20480,y:1088.88},{x:21504,y:1080.13},{x:22528,y:1070.64},{x:23552,y:1061.95},{x:23797,y:1055.61},{x:24817,y:1043.48}], borderColor: '#c084fc', borderWidth: 1.5, tension: 0.3, pointRadius: 2 },
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'nearest', axis: 'xy', intersect: false },
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    title: function(items) { return items[0] ? items[0].dataset.label : ''; },
+                    label: function(ctx) { return 'ctx: ' + ctx.parsed.x + '  pp: ' + ctx.parsed.y + ' t/s'; }
+                }
+            }
+        },
+        scales: {
+            x: { type: 'linear', title: { display: true, text: 'Context Tokens', color: '#8b90a0' }, ticks: { color: '#8b90a0', stepSize: 2000, autoSkip: false, callback: function(v) { return (v/1000)+'k'; } }, grid: { color: '#2a2e3a' }, min: 4000, max: 26000 },
+            y: { title: { display: true, text: 't/s', color: '#8b90a0' }, ticks: { color: '#8b90a0', stepSize: 50 }, grid: { color: '#2a2e3a' }, min: 950, max: 1300 }
+        }
+    }
+});
+
+const barBaseline = 33.87;
+const barData = [
+    { label: 'S1', tg: 33.87, color: '#71717a' },
+    { label: 'S2', tg: 72.22, color: '#14b8a6' },
+    { label: 'S3', tg: 68.14, color: '#86efac' },
+    { label: 'S4', tg: 70.55, color: '#fbbf24' },
+    { label: 'S5', tg: 64.72, color: '#f87171' },
+    { label: 'S6', tg: 73.39, color: '#6c8eef' },
+    { label: 'S7', tg: 64.18, color: '#c084fc' },
+    { label: 'S8', tg: 74.46, color: '#f472b6' },
+    { label: 'S9', tg: 76.35, color: '#22d3ee' },
+    { label: 'S10', tg: 74.17, color: '#60a5fa' },
+    { label: 'S11', tg: 73.89, color: '#fb923c' },
+    { label: 'S12', tg: 79.71, color: '#4ade80' },
+    { label: 'S13', tg: 72.49, color: '#94a3b8' },
+    { label: 'S14', tg: 74.24, color: '#d946ef' },
+    { label: 'S15', tg: 72.57, color: '#38bdf8' },
+    { label: 'S16', tg: 74.81, color: '#84cc16' },
+    { label: 'S17', tg: 73.33, color: '#a78bfa' },
+    { label: 'S18', tg: 90.71, color: '#f97316' },
+    { label: 'S19', tg: 96.90, color: '#2dd4bf' },
+    { label: 'S20', tg: 81.21, color: '#eab308' },
+    { label: 'S21', tg: 116.97, color: '#10b981' },
+    { label: 'S22', tg: 99.97, color: '#8b5cf6' },
+    { label: 'S23', tg: 139.86, color: '#ef4444' },
+    { label: 'S24', tg: 111.62, color: '#f43f5e' },
+    { label: 'S25', tg: 61.73, color: '#64748b' }
+];
+new Chart(document.getElementById('chartBar'), {
+    type: 'bar',
+    data: {
+        labels: barData.map(d => d.label),
+        datasets: [{
+            label: 'Decode Speed (t/s)',
+            data: barData.map(d => d.tg),
+            backgroundColor: barData.map(d => d.color + 'cc'),
+            borderColor: barData.map(d => d.color),
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: function(ctx) {
+                        const tg = ctx.parsed.x;
+                        const speedup = (tg / barBaseline).toFixed(1);
+                        return tg === barBaseline ? tg + ' t/s (baseline)' : tg + ' t/s (' + speedup + '× vs baseline)';
+                    }
+                }
+            },
+            annotation: undefined
+        },
+        scales: {
+            x: {
+                title: { display: true, text: 'Decode Speed (t/s)', color: '#8b90a0' },
+                ticks: { color: '#8b90a0' },
+                grid: { color: '#2a2e3a' },
+                min: 0, max: 150
+            },
+            y: {
+                ticks: { color: '#8b90a0', font: { size: 11 } },
+                grid: { display: false }
+            }
+        }
+    },
+    plugins: [{
+        afterDraw(chart) {
+            const ctx = chart.ctx;
+            const xScale = chart.scales.x;
+            const yScale = chart.scales.y;
+            const x = xScale.getPixelForValue(barBaseline);
+            ctx.save();
+            ctx.setLineDash([6, 4]);
+            ctx.strokeStyle = '#71717a';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x, yScale.top);
+            ctx.lineTo(x, yScale.bottom);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#71717a';
+            ctx.font = '11px -apple-system, system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('Baseline: ' + barBaseline + ' t/s', x + 4, yScale.top + 12);
+            ctx.restore();
+            chart.data.datasets[0].data.forEach((val, i) => {
+                if (val === barBaseline) return;
+                const speedup = (val / barBaseline).toFixed(1);
+                const barX = xScale.getPixelForValue(val);
+                const barY = yScale.getPixelForValue(i);
+                ctx.save();
+                ctx.fillStyle = '#e2e4e9';
+                ctx.font = 'bold 10px -apple-system, system-ui, sans-serif';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(speedup + '×', barX + 4, barY);
+                ctx.restore();
+            });
+        }
+    }]
+});
+
+new Chart(document.getElementById('chartMTPScatter'), {
+    type: 'scatter',
+    data: {
+        datasets: [
+            { label: 'S23: n=4, k4v=64', data: [{x:76.1,y:139.86}], backgroundColor: '#ef4444', borderColor: '#ef4444', pointRadius: 10, pointHoverRadius: 13 },
+            { label: 'S21: n=3, k4v=64', data: [{x:72.8,y:116.97}], backgroundColor: '#10b981', borderColor: '#10b981', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S24: n=4, k4v=64 rerun', data: [{x:68.6,y:111.62}], backgroundColor: '#f43f5e', borderColor: '#f43f5e', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S22: n=2, k4v=64', data: [{x:67.9,y:99.97}], backgroundColor: '#8b5cf6', borderColor: '#8b5cf6', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S19: n=6, k4v=96', data: [{x:64.7,y:96.90}], backgroundColor: '#2dd4bf', borderColor: '#2dd4bf', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S18: n=6, k4v=48', data: [{x:62.8,y:90.71}], backgroundColor: '#f97316', borderColor: '#f97316', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S20: n=6, k4v=24', data: [{x:65.0,y:81.21}], backgroundColor: '#eab308', borderColor: '#eab308', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S12: n=6, b/ub 1024/1024', data: [{x:83.0,y:79.71}], backgroundColor: '#4ade80', borderColor: '#4ade80', pointRadius: 10, pointHoverRadius: 13 },
+            { label: 'S9: n=5, f16/f16', data: [{x:82.3,y:76.35}], backgroundColor: '#22d3ee', borderColor: '#22d3ee', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S16: n=4, b/ub 1024/1024', data: [{x:86.3,y:74.81}], backgroundColor: '#84cc16', borderColor: '#84cc16', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S8: n=5, q8/q8', data: [{x:83.1,y:74.46}], backgroundColor: '#f472b6', borderColor: '#f472b6', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S14: n=5, b/ub 1024/1024', data: [{x:79.7,y:74.24}], backgroundColor: '#d946ef', borderColor: '#d946ef', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S11: n=6, b/ub 4086/1024', data: [{x:76.0,y:73.89}], backgroundColor: '#fb923c', borderColor: '#fb923c', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S10: n=6, f16/f16', data: [{x:76.6,y:74.17}], backgroundColor: '#60a5fa', borderColor: '#60a5fa', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S6: n=4, q8/q8', data: [{x:88.3,y:73.39}], backgroundColor: '#6c8eef', borderColor: '#6c8eef', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S17: n=6, b/ub 2048/2048, q8/q8', data: [{x:78.8,y:73.33}], backgroundColor: '#a78bfa', borderColor: '#a78bfa', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S15: n=7, b/ub 1024/1024', data: [{x:71.1,y:72.57}], backgroundColor: '#38bdf8', borderColor: '#38bdf8', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S13: n=6, b/ub 1024/512', data: [{x:74.7,y:72.49}], backgroundColor: '#94a3b8', borderColor: '#94a3b8', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S2: n=6, q8/f16', data: [{x:77.2,y:72.22}], backgroundColor: '#14b8a6', borderColor: '#14b8a6', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S4: n=3, q8/f16', data: [{x:91.1,y:70.55}], backgroundColor: '#fbbf24', borderColor: '#fbbf24', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S3: n=6, 5:5', data: [{x:74.2,y:68.14}], backgroundColor: '#86efac', borderColor: '#86efac', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S5: n=2, 5:5', data: [{x:96.7,y:64.72}], backgroundColor: '#f87171', borderColor: '#f87171', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S7: n=2, q8/q8', data: [{x:93.7,y:64.18}], backgroundColor: '#c084fc', borderColor: '#c084fc', pointRadius: 8, pointHoverRadius: 11 },
+            { label: 'S25: n=3, k4v=96', data: [{x:39.9,y:61.73}], backgroundColor: '#64748b', borderColor: '#64748b', pointRadius: 8, pointHoverRadius: 11 }
+        ]
+    },
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y} t/s @ ${ctx.parsed.x}% acc`
+                }
+            }
+        },
+        scales: {
+            x: { title: { display: true, text: 'Acceptance Rate (%)', color: '#8b90a0' }, ticks: { color: '#8b90a0' }, grid: { color: '#2a2e3a' }, min: 35, max: 100 },
+            y: { title: { display: true, text: 'Decode Speed (t/s)', color: '#8b90a0' }, ticks: { color: '#8b90a0' }, grid: { color: '#2a2e3a' }, min: 55, max: 150 }
+        }
+    },
+    plugins: [{
+        afterDraw(chart) {
+            const ctx = chart.ctx;
+            ctx.font = '11px -apple-system, system-ui, sans-serif';
+            ctx.textAlign = 'left';
+            chart.data.datasets.forEach((ds, i) => {
+                const meta = chart.getDatasetMeta(i);
+                const pt = meta.data[0];
+                if (!pt) return;
+                ctx.fillStyle = ds.borderColor;
+                const label = ds.label.split(':')[0];
+                ctx.fillText(label, pt.x + 12, pt.y - 4);
+            });
+        }
+    }]
+});
+
+(function setupTableSort() {
+    const table = document.getElementById('sessionTable');
+    if (!table) return;
+    const tbody = table.tBodies[0];
+    const headers = table.tHead.rows[0].cells;
+    const extract = (cell) => {
+        const txt = cell.textContent.trim();
+        const m = txt.replace(/,/g, '').match(/-?\d+(\.\d+)?/);
+        return m ? { num: parseFloat(m[0]), str: txt } : { num: NaN, str: txt };
+    };
+    Array.from(headers).forEach((th, colIdx) => {
+        th.addEventListener('click', () => {
+            const currentDir = th.classList.contains('sort-asc') ? 'asc' : th.classList.contains('sort-desc') ? 'desc' : null;
+            const dir = currentDir === 'asc' ? 'desc' : 'asc';
+            Array.from(headers).forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+            th.classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
+            const rows = Array.from(tbody.rows);
+            const sample = rows.map(r => extract(r.cells[colIdx]));
+            const allNumeric = sample.every(s => !isNaN(s.num));
+            rows.sort((a, b) => {
+                const va = extract(a.cells[colIdx]);
+                const vb = extract(b.cells[colIdx]);
+                let cmp;
+                if (allNumeric) cmp = va.num - vb.num;
+                else cmp = va.str.localeCompare(vb.str, undefined, { numeric: true });
+                return dir === 'asc' ? cmp : -cmp;
+            });
+            rows.forEach(r => tbody.appendChild(r));
+        });
+    });
+})();
+</script>
+</body>
+</html>
