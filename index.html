@@ -39,6 +39,9 @@ table.sortable th:hover { color: var(--accent); }
 table.sortable th::after { content: '⇅'; position: absolute; right: 8px; opacity: 0.35; font-size: 10px; }
 table.sortable th.sort-asc::after { content: '▲'; opacity: 1; color: var(--accent); }
 table.sortable th.sort-desc::after { content: '▼'; opacity: 1; color: var(--accent); }
+.table-scroll { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.failed-configs-table { min-width: 720px; }
+.failed-configs-table th, .failed-configs-table td { white-space: nowrap; }
 .findings { list-style: none; }
 .findings li { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
 .findings li:last-child { border-bottom: none; }
@@ -175,7 +178,8 @@ code { color: #c4b5fd; }
 </div>
 <div class="card full-width" style="margin-top:24px; border-color:#f8717133;">
 <div class="card-title" style="color:#f87171;">Failed Configs</div>
-<table>
+<div class="table-scroll">
+<table class="failed-configs-table">
 <thead>
 <tr><th style="text-align:left">Config</th><th style="text-align:left">KV</th><th>Split</th><th>Ctx</th><th style="text-align:left">Error</th></tr>
 </thead>
@@ -187,6 +191,7 @@ code { color: #c4b5fd; }
 <tr><td>MTP + ngram <code>k4v=128</code></td><td>q8/q8</td><td>—</td><td>262k</td><td style="text-align:left;color:#f87171"><code>GGML_ASSERT(obj_new)</code> after 26,129 decoded</td></tr>
 </tbody>
 </table>
+</div>
 </div>
 
 <h2>Hardware Configuration</h2>
@@ -204,7 +209,7 @@ code { color: #c4b5fd; }
 <table>
 <tr><td>CPU</td><td>AMD Ryzen 7 9700X (8C/16T)</td></tr>
 <tr><td>RAM</td><td>64 GB DDR5</td></tr>
-<tr><td>Motherboard</td><td>MSI MS-iCraft B850 AIGA</td></tr>
+<tr><td>Motherboard</td><td>MS-iCraft B850 AIGA</td></tr>
 <tr><td>PSU</td><td>1300W</td></tr>
 <tr><td>ROCm</td><td>7.2.2</td></tr>
 <tr><td>OS</td><td>Ubuntu 24.04.4 LTS (Linux 6.17.0-14-generic x86_64)</td></tr>
