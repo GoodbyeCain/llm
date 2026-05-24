@@ -6,7 +6,7 @@ llama.cpp draft-MTP / ngram-combo · ROCm · includes no-speculation baseline (S
 ## Key Findings
 * batch 1024 & ubatch 1024 get best PP
 * k4v=96 is unstable
-* suggest kv4=96 n=3
+* suggest kv4=64 n=3
 
 # Hardware Configuration
 * GPU 0	AMD Radeon RX 7900 XTX	24 GB GDDR6
